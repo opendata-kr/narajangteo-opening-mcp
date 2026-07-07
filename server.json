@@ -8,6 +8,10 @@
     "url": "https://github.com/opendata-kr/narajangteo-opening-mcp",
     "source": "github"
   },
+  "icons": [
+    { "src": "https://raw.githubusercontent.com/opendata-kr/.github/main/profile/images/avatar.svg", "mimeType": "image/svg+xml", "sizes": ["any"] },
+    { "src": "https://raw.githubusercontent.com/opendata-kr/.github/main/profile/images/avatar.png", "mimeType": "image/png", "sizes": ["512x512"] }
+  ],
   "version": "0.1.0",
   "packages": [
     {
