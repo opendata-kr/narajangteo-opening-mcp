@@ -44,3 +44,19 @@ describe("formatBidder", () => {
     expect(b.totalScore).toBe("91.0894");
   });
 });
+
+describe("formatOpening", () => {
+  it("개찰진행 요약 + topBidder 파싱", () => {
+    const raw = { bidNtceNo: "N1", bidNtceNm: "구매", opengDt: "2025-06-17 11:00:00", prtcptCnum: "2", progrsDivCdNm: "개찰완료", opengCorpInfo: "A사^1^김^100^99.9", rsrvtnPrceFileExistnceYn: "Y", ntceInsttNm: "조달청", dminsttNm: "수요기관" };
+    const o = formatOpening(raw);
+    expect(o.openingDt).toBe("2025-06-17 11:00:00");
+    expect(o.progress).toBe("개찰완료");
+    expect(o.reservePriceFileExists).toBe("Y");
+    expect(o.topBidder?.name).toBe("A사");
+    expect(o.topBidder?.rate).toBe("99.9");
+  });
+  it("opengCorpInfo 없으면 topBidder null", () => {
+    const o = formatOpening({ bidNtceNo: "N", opengCorpInfo: "" });
+    expect(o.topBidder).toBeNull();
+  });
+});
