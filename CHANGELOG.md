@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.1](https://github.com/opendata-kr/narajangteo-opening-mcp/compare/v0.2.0...v0.2.1) (2026-07-07)
+
+
+### Bug Fixes
+
+* **api:** 기간창 분할이 2월 낀 구간에서 조회 1개월 한계 초과(MAX_WINDOW_DAYS 31→28) ([b7d56e9](https://github.com/opendata-kr/narajangteo-opening-mcp/commit/b7d56e965eecb823e7694a21cd4efd1517565771))
+
+
+### Refactor
+
+* **api:** 기간창 분할을 캘린더 월 경계 기반으로(고정 일수 매직넘버 제거) ([c449f87](https://github.com/opendata-kr/narajangteo-opening-mcp/commit/c449f87d3186e3a3b599380b4483d363c4244d15))
+
 ## [0.2.0](https://github.com/opendata-kr/narajangteo-opening-mcp/compare/v0.1.0...v0.2.0) (2026-07-07)
 
 
