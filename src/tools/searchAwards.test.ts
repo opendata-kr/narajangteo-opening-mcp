@@ -24,4 +24,12 @@ describe("runSearchAwards", () => {
     expect("error" in (r.results.cnstwk as any)).toBe(true);
     expect("items" in (r.results.thng as any)).toBe(true);
   });
+  it("startDate/endDate 한쪽만 주면 에러", async () => {
+    const client = fakeClient(async () => ({ totalCount: 0, items: [] }));
+    await expect(runSearchAwards(client, { startDate: "20260601" })).rejects.toThrow(/함께 지정/);
+  });
+  it("startDate가 endDate보다 늦으면 에러", async () => {
+    const client = fakeClient(async () => ({ totalCount: 0, items: [] }));
+    await expect(runSearchAwards(client, { startDate: "20260607", endDate: "20260601" })).rejects.toThrow(/늦/);
+  });
 });

@@ -45,6 +45,14 @@ export async function runSearchAwards(client: DataGoKrClient, args: SearchAwards
     prtcptLmtRgnNm: args.region, indstrytyNm: args.industry,
     presmptPrceBgn: args.minPrice, presmptPrceEnd: args.maxPrice, bizno: args.bizno,
   };
+
+  if ((args.startDate && !args.endDate) || (!args.startDate && args.endDate)) {
+    throw new Error("startDate와 endDate는 함께 지정해야 합니다.");
+  }
+  if (args.startDate && args.endDate && args.startDate > args.endDate) {
+    throw new Error("startDate가 endDate보다 늦습니다.");
+  }
+
   const windows = args.startDate && args.endDate
     ? splitDateWindows(args.startDate, args.endDate, MAX_WINDOW_DAYS)
     : [{ bgn: undefined as string | undefined, end: undefined as string | undefined }];
