@@ -13,8 +13,15 @@ export const getBidResultInputShape = {
   bidNtceNo: z.string().describe("입찰공고번호"),
   bidKind: z.enum(["cnstwk", "servc", "thng", "frgcpt"]).optional().describe("업무구분. 미지정 시 A/B/C를 전 구분에서 조회"),
   status: z.enum(["completed", "failing", "rebid", "all"]).optional().describe("D 상태(기본 all: 완료·유찰·재입찰 병렬)"),
+  bidNtceOrd: z.string().optional().describe("입찰공고차수. 특정 집행으로 좁힘"),
+  bidClsfcNo: z.string().optional().describe("입찰분류번호. 특정 집행으로 좁힘"),
+  rbidNo: z.string().optional().describe("재입찰번호. 특정 집행으로 좁힘"),
+  myBizno: z.string().optional().describe("자사 사업자번호. 일치하는 투찰행에 isOurs 플래그"),
 };
-export type GetBidResultArgs = { bidNtceNo: string; bidKind?: BidKind; status?: "completed" | "failing" | "rebid" | "all" };
+export type GetBidResultArgs = {
+  bidNtceNo: string; bidKind?: BidKind; status?: "completed" | "failing" | "rebid" | "all";
+  bidNtceOrd?: string; bidClsfcNo?: string; rbidNo?: string; myBizno?: string;
+};
 
 export interface Execution {
   bidNtceOrd: string; bidClsfcNo: string; rbidNo: string;
@@ -53,7 +60,8 @@ export async function runGetBidResult(client: DataGoKrClient, args: GetBidResult
     const [, ord = "", clsfc = "", rbid = ""] = key.split("|");
     const a = aRaw.find(match), b = bRaw.find(match);
     const cItems = cRaw.filter(match), dItems = dRaw.filter(match);
-    const bidders = dItems.map(formatBidder);
+    const bidders = dItems.map(formatBidder).map((b) =>
+      args.myBizno && b.bizno === args.myBizno ? { ...b, isOurs: true } : b);
     return {
       bidNtceOrd: ord, bidClsfcNo: clsfc, rbidNo: rbid,
       awardMethod: estimateAwardMethod(bidders),
@@ -64,8 +72,16 @@ export async function runGetBidResult(client: DataGoKrClient, args: GetBidResult
     };
   });
 
+  let filtered = executions;
+  if (args.bidNtceOrd !== undefined || args.bidClsfcNo !== undefined || args.rbidNo !== undefined) {
+    filtered = executions.filter((e) =>
+      (args.bidNtceOrd === undefined || e.bidNtceOrd === args.bidNtceOrd) &&
+      (args.bidClsfcNo === undefined || e.bidClsfcNo === args.bidClsfcNo) &&
+      (args.rbidNo === undefined || e.rbidNo === args.rbidNo));
+  }
+
   return {
-    bidNtceNo: no, executions, errors,
+    bidNtceNo: no, executions: filtered, errors,
     notes: [
       "A/B/C/D를 복합키(공고번호+차수+분류+재입찰번호)로 조인한다. 다분류·다차수는 집행 단위로 분리된다.",
       "낙찰방식 구분 필드가 API에 없어 점수 채움으로 추정한다(uncertain). 협상계약이 아니면 세부심사점수는 제공되지 않는다.",

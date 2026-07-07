@@ -27,4 +27,5 @@ export interface BidderDetail {
   amount: string; rate: string; remark: string;
   priceScore: string; techScore: string; techRawScore: string; totalScore: string;
   bidDt: string;
+  isOurs?: boolean;
 }
