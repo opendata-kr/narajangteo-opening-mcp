@@ -28,15 +28,13 @@ export const D_OPERATION: Record<OpeningStatus, string> = {
 // 날짜 기준. posted=공고(게시), opened=개찰, notice=공고번호 단건.
 export type DateType = "posted" | "opened" | "notice";
 
-// A 기본판(getScsbidListSttus*): 1등록 2공고 3개찰 4공고번호
-// A PPSSrch: 1공고게시 2개찰 3공고번호
+// A 기본판: 1등록 2공고 3개찰 4공고번호 / A PPSSrch: 1공고게시 2개찰 3공고번호
 export function awardInqryDiv(dateType: DateType, ppsSrch: boolean): string {
-  if (ppsSrch) return dateType === "opened" ? "2" : dateType === "notice" ? "3" : "1";
-  return dateType === "notice" ? "4" : dateType === "opened" ? "2" : "1";
+  if (ppsSrch) return dateType === "notice" ? "3" : dateType === "opened" ? "2" : "1";
+  return dateType === "notice" ? "4" : dateType === "opened" ? "3" : "2";
 }
-// B 기본판(getOpengResultListInfo*): 1입력 2공고 3개찰 4공고번호
-// B PPSSrch: A PPSSrch와 동일 체계로 취급(spec §3.2)
+// B 기본판: 1입력 2공고 3개찰 4공고번호 / B PPSSrch: A PPSSrch와 동일
 export function openingInqryDiv(dateType: DateType, ppsSrch: boolean): string {
-  if (ppsSrch) return dateType === "opened" ? "2" : dateType === "notice" ? "4" : "1";
-  return dateType === "notice" ? "4" : dateType === "opened" ? "3" : "1";
+  if (ppsSrch) return dateType === "notice" ? "3" : dateType === "opened" ? "2" : "1";
+  return dateType === "notice" ? "4" : dateType === "opened" ? "3" : "2";
 }
