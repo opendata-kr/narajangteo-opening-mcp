@@ -5,20 +5,19 @@ import { splitDateWindows, fetchAllPages, MAX_WINDOW_DAYS } from "../api/dateWin
 import { formatOpening, failReasonHint } from "../format.js";
 import type { OpeningSummary } from "../api/types.js";
 
-const STATUS_LABEL = { completed: "개찰완료", failing: "유찰", rebid: "재입찰" } as const;
-
 export const searchOpeningsInputShape = {
-  bidKind: z.array(z.enum(["cnstwk", "servc", "thng", "frgcpt"])).optional(),
+  bidKind: z.array(z.enum(["cnstwk", "servc", "thng", "frgcpt"])).optional().describe("업무구분 배열(cnstwk=공사·servc=용역·thng=물품·frgcpt=외자). 미지정 시 전 구분 병렬"),
   keyword: z.string().optional().describe("공고명(bidNtceNm)"),
   institution: z.string().optional().describe("공고기관명"),
-  demandInstitution: z.string().optional(),
-  region: z.string().optional(),
-  industry: z.string().optional(),
+  demandInstitution: z.string().optional().describe("수요기관명(dminsttNm)"),
+  region: z.string().optional().describe("참가제한지역명(prtcptLmtRgnNm, 예: 인천광역시)"),
+  industry: z.string().optional().describe("업종명(indstrytyNm)"),
   status: z.enum(["개찰완료", "유찰", "재입찰"]).optional().describe("진행상태 필터(응답 progrsDivCdNm 기준 클라이언트 필터)"),
-  startDate: z.string().optional(), endDate: z.string().optional(),
-  dateType: z.enum(["posted", "opened"]).optional(),
-  pageSize: z.number().int().min(1).max(100).optional(),
-  maxPages: z.number().int().min(1).max(50).optional(),
+  startDate: z.string().optional().describe("조회 시작일 YYYYMMDD (endDate와 함께 지정)"),
+  endDate: z.string().optional().describe("조회 종료일 YYYYMMDD (startDate와 함께 지정)"),
+  dateType: z.enum(["posted", "opened"]).optional().describe("날짜 기준: posted=공고게시(기본), opened=개찰"),
+  pageSize: z.number().int().min(1).max(100).optional().describe("창당 페이지 크기(기본 20, 개찰결과는 느려 작게 권장)"),
+  maxPages: z.number().int().min(1).max(50).optional().describe("창당 최대 페이지(기본 5)"),
 };
 
 export type SearchOpeningsArgs = {
