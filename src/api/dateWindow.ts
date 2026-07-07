@@ -1,11 +1,5 @@
 import type { OperationResult, RawItem } from "@opendata-kr/core";
 
-// API 한계는 "종료일 ≤ 시작일 + 1 캘린더 개월"이다(고정 일수 아님). 달 길이가 달라
-// 고정 31일 창은 2월을 낀 구간에서 1개월을 넘겨 resultCode 07(입력범위값 초과)을 낸다
-// (예: Feb1~Mar3 = 31일이지만 Feb1+1개월=Mar1 초과). 최단 캘린더 월(2월=28일) 이하로
-// 두면 어떤 시작일에서도 항상 1개월 이내라 안전하다. 라이브 검증(2026-07-07)으로 확인.
-export const MAX_WINDOW_DAYS = 28;
-
 function toDate(yyyymmdd: string): Date {
   const y = Number(yyyymmdd.slice(0, 4)), m = Number(yyyymmdd.slice(4, 6)), d = Number(yyyymmdd.slice(6, 8));
   return new Date(Date.UTC(y, m - 1, d));
@@ -15,17 +9,21 @@ function fmt(dt: Date): string {
   return `${y}${m}${d}`;
 }
 
-export function splitDateWindows(start: string, end: string, maxDays: number): Array<{ bgn: string; end: string }> {
+// data.go.kr 낙찰정보 API의 조회기간 한계는 "종료일 ≤ 시작일 + 1 캘린더 개월"이다(고정 일수 아님).
+// 달 길이가 달라 고정 일수 창은 짧은 달(2월)을 낀 구간에서 1개월을 넘겨 resultCode 07(입력범위값 초과)을 냈다.
+// 창을 캘린더 월 경계로 자른다: 시작일~그 달 말일, 다음 창은 다음 달 1일부터. 각 창이 한 달 안에 머물러
+// 항상 1개월 이내가 된다(월을 넘지 않음). 라이브 검증(2026-07-07). 반환 bgn/end는 YYYYMMDDHHMM.
+export function splitDateWindows(start: string, end: string): Array<{ bgn: string; end: string }> {
   const windows: Array<{ bgn: string; end: string }> = [];
   let cur = toDate(start);
   const last = toDate(end);
   while (cur <= last) {
-    const winEnd = new Date(cur);
-    winEnd.setUTCDate(winEnd.getUTCDate() + maxDays - 1);
-    const eff = winEnd > last ? last : winEnd;
+    // 이번 달 말일(다음 달 0일 = 이번 달 마지막 날)
+    const monthEnd = new Date(Date.UTC(cur.getUTCFullYear(), cur.getUTCMonth() + 1, 0));
+    const eff = monthEnd > last ? last : monthEnd;
     windows.push({ bgn: `${fmt(cur)}0000`, end: `${fmt(eff)}2359` });
     cur = new Date(eff);
-    cur.setUTCDate(cur.getUTCDate() + 1);
+    cur.setUTCDate(cur.getUTCDate() + 1); // 다음 달 1일
   }
   return windows;
 }

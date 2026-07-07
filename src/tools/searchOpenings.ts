@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { DataGoKrClient } from "@opendata-kr/core";
 import { ALL_BID_KINDS, openingSearchOp, openingInqryDiv, type BidKind, type DateType } from "../api/endpoints.js";
-import { splitDateWindows, fetchAllPages, MAX_WINDOW_DAYS } from "../api/dateWindow.js";
+import { splitDateWindows, fetchAllPages } from "../api/dateWindow.js";
 import { formatOpening, failReasonHint } from "../format.js";
 import type { OpeningSummary } from "../api/types.js";
 
@@ -45,7 +45,7 @@ export async function runSearchOpenings(client: DataGoKrClient, args: SearchOpen
     prtcptLmtRgnNm: args.region, indstrytyNm: args.industry,
   };
   const windows = args.startDate && args.endDate
-    ? splitDateWindows(args.startDate, args.endDate, MAX_WINDOW_DAYS)
+    ? splitDateWindows(args.startDate, args.endDate)
     : [{ bgn: undefined as string | undefined, end: undefined as string | undefined }];
   // 개찰결과(계열 B)는 응답이 무겁고 느려 큰 페이지는 타임아웃한다(라이브: 20행 0.6초, 50행 9초, 100행 타임아웃).
   // 기본 페이지를 작게 둔다.

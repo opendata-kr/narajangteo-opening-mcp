@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { DataGoKrClient } from "@opendata-kr/core";
 import { ALL_BID_KINDS, awardSearchOp, awardInqryDiv, type BidKind, type DateType } from "../api/endpoints.js";
-import { splitDateWindows, fetchAllPages, MAX_WINDOW_DAYS } from "../api/dateWindow.js";
+import { splitDateWindows, fetchAllPages } from "../api/dateWindow.js";
 import { formatAward } from "../format.js";
 import type { AwardResult } from "../api/types.js";
 
@@ -54,7 +54,7 @@ export async function runSearchAwards(client: DataGoKrClient, args: SearchAwards
   }
 
   const windows = args.startDate && args.endDate
-    ? splitDateWindows(args.startDate, args.endDate, MAX_WINDOW_DAYS)
+    ? splitDateWindows(args.startDate, args.endDate)
     : [{ bgn: undefined as string | undefined, end: undefined as string | undefined }];
   const pageSize = args.pageSize ?? 100;
   const maxPages = args.maxPages ?? 10;
