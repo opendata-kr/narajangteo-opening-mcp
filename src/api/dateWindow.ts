@@ -1,8 +1,10 @@
 import type { OperationResult, RawItem } from "@opendata-kr/core";
 
-// 라이브 검증(2026-07-07): 낙찰 서비스는 1개월 창도 통과(1주 1189·1개월 6096건 정상).
-// 형제 bid 서비스(1주 축소)와 달라 31일로 둔다.
-export const MAX_WINDOW_DAYS = 31;
+// API 한계는 "종료일 ≤ 시작일 + 1 캘린더 개월"이다(고정 일수 아님). 달 길이가 달라
+// 고정 31일 창은 2월을 낀 구간에서 1개월을 넘겨 resultCode 07(입력범위값 초과)을 낸다
+// (예: Feb1~Mar3 = 31일이지만 Feb1+1개월=Mar1 초과). 최단 캘린더 월(2월=28일) 이하로
+// 두면 어떤 시작일에서도 항상 1개월 이내라 안전하다. 라이브 검증(2026-07-07)으로 확인.
+export const MAX_WINDOW_DAYS = 28;
 
 function toDate(yyyymmdd: string): Date {
   const y = Number(yyyymmdd.slice(0, 4)), m = Number(yyyymmdd.slice(4, 6)), d = Number(yyyymmdd.slice(6, 8));
