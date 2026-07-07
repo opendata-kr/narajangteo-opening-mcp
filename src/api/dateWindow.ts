@@ -1,7 +1,8 @@
 import type { OperationResult, RawItem } from "@opendata-kr/core";
 
-// 착수 시 프로브(§9-1)로 실 폭 확정 후 조정. 형제 서비스가 1주라 보수적으로 7일.
-export const MAX_WINDOW_DAYS = 7;
+// 라이브 검증(2026-07-07): 낙찰 서비스는 1개월 창도 통과(1주 1189·1개월 6096건 정상).
+// 형제 bid 서비스(1주 축소)와 달라 31일로 둔다.
+export const MAX_WINDOW_DAYS = 31;
 
 function toDate(yyyymmdd: string): Date {
   const y = Number(yyyymmdd.slice(0, 4)), m = Number(yyyymmdd.slice(4, 6)), d = Number(yyyymmdd.slice(6, 8));

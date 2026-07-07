@@ -48,7 +48,9 @@ export async function runSearchOpenings(client: DataGoKrClient, args: SearchOpen
   const windows = args.startDate && args.endDate
     ? splitDateWindows(args.startDate, args.endDate, MAX_WINDOW_DAYS)
     : [{ bgn: undefined as string | undefined, end: undefined as string | undefined }];
-  const pageSize = args.pageSize ?? 100, maxPages = args.maxPages ?? 10;
+  // 개찰결과(계열 B)는 응답이 무겁고 느려 큰 페이지는 타임아웃한다(라이브: 20행 0.6초, 50행 9초, 100행 타임아웃).
+  // 기본 페이지를 작게 둔다.
+  const pageSize = args.pageSize ?? 20, maxPages = args.maxPages ?? 5;
 
   const settled = await Promise.allSettled(kinds.map(async (kind) => {
     const all: OpeningSummary[] = [];
@@ -76,6 +78,7 @@ export async function runSearchOpenings(client: DataGoKrClient, args: SearchOpen
     notes: [
       "status는 응답 progrsDivCdNm 기준 클라이언트 필터다(API 요청 파라미터 아님). totalCountBeforeFilter는 필터 전 값.",
       "재입찰은 동일 공고 내 재입찰이며 재공고가 아니다(재공고는 입찰공고 서비스 소관).",
+      "개찰결과 조회는 응답이 느리다. 페이지 크기를 작게(기본 20) 유지하고 검색조건(기관·업종·기간)을 좁혀 쓴다.",
     ],
   };
 }
