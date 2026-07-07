@@ -9,16 +9,28 @@
     "source": "github"
   },
   "icons": [
-    { "src": "https://raw.githubusercontent.com/opendata-kr/.github/main/profile/images/avatar.svg", "mimeType": "image/svg+xml", "sizes": ["any"] },
-    { "src": "https://raw.githubusercontent.com/opendata-kr/.github/main/profile/images/avatar.png", "mimeType": "image/png", "sizes": ["512x512"] }
+    {
+      "src": "https://raw.githubusercontent.com/opendata-kr/.github/main/profile/images/avatar.svg",
+      "mimeType": "image/svg+xml",
+      "sizes": [
+        "any"
+      ]
+    },
+    {
+      "src": "https://raw.githubusercontent.com/opendata-kr/.github/main/profile/images/avatar.png",
+      "mimeType": "image/png",
+      "sizes": [
+        "512x512"
+      ]
+    }
   ],
-  "version": "0.1.0",
+  "version": "0.2.0",
   "packages": [
     {
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "@opendata-kr/narajangteo-opening-mcp",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "transport": {
         "type": "stdio"
       },
