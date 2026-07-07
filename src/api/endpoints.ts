@@ -35,3 +35,7 @@ export function openingInqryDiv(dateType: DateType, ppsSrch: boolean): string {
   if (ppsSrch) return dateType === "notice" ? "3" : dateType === "opened" ? "2" : "1";
   return dateType === "notice" ? "4" : dateType === "opened" ? "3" : "2";
 }
+// 계열 C 예비가격상세: 1입력일시 2입찰공고번호 (PPSSrch 없음)
+export function preparInqryDiv(byNotice: boolean): string {
+  return byNotice ? "2" : "1";
+}

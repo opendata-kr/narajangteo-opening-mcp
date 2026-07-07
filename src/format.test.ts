@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseOpengCorpInfo, formatAward, formatOpening, formatBidder, compositeKeyOf } from "./format.js";
+import { parseOpengCorpInfo, formatAward, formatOpening, formatBidder, compositeKeyOf, aggregatePreparPrice, failReasonHint, estimateAwardMethod } from "./format.js";
 
 describe("parseOpengCorpInfo", () => {
   it("단일 낙찰자 packed 문자열 파싱", () => {
@@ -60,8 +60,6 @@ describe("formatOpening", () => {
     expect(o.topBidder).toBeNull();
   });
 });
-
-import { aggregatePreparPrice, failReasonHint, estimateAwardMethod } from "./format.js";
 
 describe("aggregatePreparPrice", () => {
   it("복수예가 여러 행을 집행 단위로 집약하고 사정률 산출", () => {

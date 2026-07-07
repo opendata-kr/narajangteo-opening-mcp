@@ -1,5 +1,6 @@
-export interface CompositeKey {
-  bidNtceNo: string; bidNtceOrd: string; bidClsfcNo: string; rbidNo: string;
+// opengCorpInfo(계열 B 1위 투찰) 파싱 결과
+export interface TopBidder {
+  name: string; bizno: string; ceo: string; amount: string; rate: string;
 }
 
 // 계열 A: 최종낙찰자
@@ -12,7 +13,7 @@ export interface AwardResult {
 // 계열 B: 개찰진행 (opengCorpInfo 구조화 포함)
 export interface OpeningSummary {
   bidNtceNo: string; bidNtceNm: string; openingDt: string; participants: string;
-  progress: string; topBidder: { name: string; bizno: string; ceo: string; amount: string; rate: string } | null;
+  progress: string; topBidder: TopBidder | null;
   reservePriceFileExists: string; noticeInstitution: string; demandInstitution: string;
   failReasonHint?: string;
 }

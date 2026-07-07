@@ -1,14 +1,13 @@
 import type { RawItem } from "@opendata-kr/core";
-import type { AwardResult, OpeningSummary, BidderDetail, CompositeKey, PreparPriceDetail } from "./api/types.js";
+import type { AwardResult, OpeningSummary, BidderDetail, TopBidder, PreparPriceDetail } from "./api/types.js";
 
 const pick = (raw: RawItem, k: string): string => raw[k] ?? "";
 
-export function compositeKeyOf(raw: RawItem | CompositeKey): string {
-  const g = (k: string) => (raw as RawItem)[k] ?? "";
-  return `${g("bidNtceNo")}|${g("bidNtceOrd")}|${g("bidClsfcNo")}|${g("rbidNo")}`;
+export function compositeKeyOf(raw: RawItem): string {
+  return `${pick(raw, "bidNtceNo")}|${pick(raw, "bidNtceOrd")}|${pick(raw, "bidClsfcNo")}|${pick(raw, "rbidNo")}`;
 }
 
-export function parseOpengCorpInfo(s: string): { name: string; bizno: string; ceo: string; amount: string; rate: string } | null {
+export function parseOpengCorpInfo(s: string): TopBidder | null {
   if (!s) return null;
   const [name = "", bizno = "", ceo = "", amount = "", rate = ""] = s.split("^");
   return { name, bizno, ceo, amount, rate };
@@ -59,6 +58,7 @@ export function aggregatePreparPrice(items: RawItem[]): PreparPriceDetail {
 // 유찰 사유는 API에 없다. 참가업체수(prtcptCnum)로 추론 힌트만 제공(spec §6, S4).
 export function failReasonHint(participants: string): string {
   const n = Number(participants);
+  if (!Number.isFinite(n)) return "참가업체수 미상. 유찰 사유 추정 불가";
   if (n === 0) return "무응찰 추정(참가 0). 재도전 기회일 수 있음";
   if (n === 1) return "단독응찰 추정(참가 1). 수의계약 직행 가능, 기회 낮음";
   return "적격자 없음 등 추정(참가 2+). 재도전 기회일 수 있음";
@@ -66,6 +66,6 @@ export function failReasonHint(participants: string): string {
 
 // 낙찰방식 구분 필드가 API에 없다. D 점수 채움 패턴으로 추정(spec §6, S5).
 export function estimateAwardMethod(bidders: BidderDetail[]): { method: "negotiated" | "qualification_or_other"; uncertain: true } {
-  const scored = bidders.some((b) => (b.totalScore && b.totalScore !== "") || (b.techScore && b.techScore !== ""));
+  const scored = bidders.some((b) => b.totalScore !== "" || b.techScore !== "");
   return { method: scored ? "negotiated" : "qualification_or_other", uncertain: true };
 }

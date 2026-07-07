@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { DataGoKrClient, RawItem } from "@opendata-kr/core";
 import {
   ALL_BID_KINDS, ALL_OPENING_STATUS, awardListOp, openingListOp, preparPriceOp,
-  D_OPERATION, awardInqryDiv, openingInqryDiv, type BidKind, type OpeningStatus,
+  D_OPERATION, awardInqryDiv, openingInqryDiv, preparInqryDiv, type BidKind, type OpeningStatus,
 } from "../api/endpoints.js";
 import {
   formatAward, formatOpening, formatBidder, aggregatePreparPrice, estimateAwardMethod, compositeKeyOf,
@@ -40,15 +40,15 @@ export async function runGetBidResult(client: DataGoKrClient, args: GetBidResult
   const errors: string[] = [];
   const kinds: BidKind[] = args.bidKind ? [args.bidKind] : [...ALL_BID_KINDS];
   const statuses: OpeningStatus[] = !args.status || args.status === "all" ? [...ALL_OPENING_STATUS] : [args.status];
-  const no = args.bidNtceNo;
+  const notice = args.bidNtceNo;
 
   // A/B/C: 업무구분 병렬 시도(inqryDiv=공고번호). D: 상태 오퍼레이션 병렬.
   const aRaw: RawItem[] = [], bRaw: RawItem[] = [], cRaw: RawItem[] = [], dRaw: RawItem[] = [];
   await Promise.all([
-    ...kinds.map(async (k) => { aRaw.push(...await safeItems(client, awardListOp(k), { inqryDiv: awardInqryDiv("notice", false), bidNtceNo: no }, errors)); }),
-    ...kinds.map(async (k) => { bRaw.push(...await safeItems(client, openingListOp(k), { inqryDiv: openingInqryDiv("notice", false), bidNtceNo: no }, errors)); }),
-    ...kinds.map(async (k) => { cRaw.push(...await safeItems(client, preparPriceOp(k), { inqryDiv: "2", bidNtceNo: no }, errors)); }),
-    ...statuses.map(async (s) => { dRaw.push(...await safeItems(client, D_OPERATION[s], { bidNtceNo: no }, errors)); }),
+    ...kinds.map(async (k) => { aRaw.push(...await safeItems(client, awardListOp(k), { inqryDiv: awardInqryDiv("notice", false), bidNtceNo: notice }, errors)); }),
+    ...kinds.map(async (k) => { bRaw.push(...await safeItems(client, openingListOp(k), { inqryDiv: openingInqryDiv("notice", false), bidNtceNo: notice }, errors)); }),
+    ...kinds.map(async (k) => { cRaw.push(...await safeItems(client, preparPriceOp(k), { inqryDiv: preparInqryDiv(true), bidNtceNo: notice }, errors)); }),
+    ...statuses.map(async (s) => { dRaw.push(...await safeItems(client, D_OPERATION[s], { bidNtceNo: notice }, errors)); }),
   ]);
 
   // 복합키로 집행 그룹핑
@@ -81,7 +81,7 @@ export async function runGetBidResult(client: DataGoKrClient, args: GetBidResult
   }
 
   return {
-    bidNtceNo: no, executions: filtered, errors,
+    bidNtceNo: notice, executions: filtered, errors,
     notes: [
       "A/B/C/D를 복합키(공고번호+차수+분류+재입찰번호)로 조인한다. 다분류·다차수는 집행 단위로 분리된다.",
       "낙찰방식 구분 필드가 API에 없어 점수 채움으로 추정한다(uncertain). 협상계약이 아니면 세부심사점수는 제공되지 않는다.",
