@@ -1,29 +1,47 @@
 <!-- mcp-name: io.github.opendata-kr/narajangteo-opening -->
 
-# narajangteo-opening-mcp
+# @opendata-kr/narajangteo-opening-mcp
 
-[![npm version](https://img.shields.io/npm/v/@opendata-kr/narajangteo-opening-mcp.svg)](https://www.npmjs.com/package/@opendata-kr/narajangteo-opening-mcp)
-[![license](https://img.shields.io/npm/l/@opendata-kr/narajangteo-opening-mcp.svg)](./LICENSE)
+나라장터 낙찰정보서비스(공공데이터포털 data.go.kr) Open API를 감싼 로컬 MCP 서버.
 
-조달청 나라장터 **낙찰정보서비스**(ScsbidInfoService) Open API를 감싼 로컬 MCP 서버. 개찰결과(최종낙찰자·투찰업체별 순위·예비가격·유찰/재입찰)를 조회한다.
+[![npm version](https://img.shields.io/npm/v/@opendata-kr/narajangteo-opening-mcp)](https://www.npmjs.com/package/@opendata-kr/narajangteo-opening-mcp)
+[![CI](https://img.shields.io/github/actions/workflow/status/opendata-kr/narajangteo-opening-mcp/ci.yml?branch=main&label=CI)](https://github.com/opendata-kr/narajangteo-opening-mcp/actions/workflows/ci.yml)
+[![node](https://img.shields.io/node/v/@opendata-kr/narajangteo-opening-mcp)](https://nodejs.org)
+[![license](https://img.shields.io/npm/l/@opendata-kr/narajangteo-opening-mcp)](./LICENSE)
 
-> [!NOTE]
-> 이 README는 스캐폴딩 골격이다. 전체 클라이언트별 설정 매트릭스, 원클릭 설치 버튼, 인증키 발급 그림 가이드(`docs/service-key-guide.md`)는 발행 전 채운다.
-
-## 무엇을 조회하나 (예시 프롬프트)
+MCP 클라이언트에서 나라장터 낙찰정보(개찰결과·최종낙찰자·투찰업체별 순위·예비가격·유찰/재입찰)를 자연어로 검색하고 조회한다. 예를 들어 이렇게 물어볼 수 있다.
 
 - "R25BK00965123 공고 개찰결과 보여줘. 낙찰자랑 투찰업체별 순위·금액."
 - "인천 지역 물품 낙찰 결과 최근 것 검색해줘."
 - "이 공고 유찰됐는지 확인해줘."
 
-## Prerequisites
+## 특징
 
-- Node.js 24+ (`.nvmrc` = `lts/krypton`)
-- data.go.kr(공공데이터포털) **낙찰정보서비스** 활용신청 후 발급받은 **Decoding(원본) 인증키**. 발급 절차는 [`docs/service-key-guide.md`](./docs/service-key-guide.md) 참조.
+- **4계열 데이터를 3개 도구로 노출**: 낙찰자(A)·개찰진행(B)·예비가격상세(C)·투찰업체별(D) 오퍼레이션을 검색용 2개(`search_awards`·`search_openings`)와 단건 심층조회 1개(`get_bid_result`)로 묶어 사용성을 단순화했다.
+- **4개 업무구분 병렬 검색**: 공사/용역/물품/외자를 한 번에 조회한다. 업무구분 미지정 시 전 구분을 동시 검색한다.
+- **넓은 기간 자동 분할**: `startDate`/`endDate` 범위가 넓으면 내부에서 창 단위로 쪼개 순차 조회한다.
+- **부분 실패 표면화**: 일부 구분·집행 조회가 실패해도 나머지 결과를 반환하고, 실패는 오류 메시지로 드러낸다(조용한 누락 없음).
+- **복합키 정합**: `get_bid_result`는 공고번호+차수+분류+재입찰번호로 A/B/C/D를 조인해 집행 단위로 묶는다.
+- **data.go.kr 에러코드 한국어화**: 인증키 만료, 트래픽 초과 등 결과코드를 조치 가능한 한국어 메시지로 정규화한다.
+- **이중 인코딩 방어**: Encoding 키를 잘못 넣으면 경고하고, 요청은 한 번만 인코딩한다.
+- **타임아웃**: API 호출에 타임아웃을 둔다.
 
-## Configuration
+## 준비물
 
-MCP 클라이언트 설정에 아래 블록을 추가한다. `@latest`로 핀한다.
+- **Node.js 24** 이상 (`.nvmrc` = `lts/krypton`).
+- **data.go.kr 인증키**:
+  1. [공공데이터포털](https://www.data.go.kr)에서 **나라장터 낙찰정보서비스**(`ScsbidInfoService`)를 활용신청해 `[승인]`을 받는다. 인증키는 계정당 하나지만, 각 API는 저마다 활용신청 승인이 있어야 그 API에서 인증된다. 서비스키가 있어도 이 API를 활용신청하지 않으면 인증 오류(코드 30)가 난다.
+  2. 마이페이지 → 활용신청 현황 → 개발계정 상세에서 **Decoding 서비스키**를 복사한다.
+  3. 같은 `DATA_GO_KR_SERVICE_KEY`는 같은 계정으로 활용신청한 다른 data.go.kr API에도 재사용된다.
+
+> [!TIP]
+> 공공데이터포털이 처음이라면 활용신청부터 인증키 복사까지 그림으로 따라 하는 [**data.go.kr 인증키 발급 가이드**](docs/service-key-guide.md)를 참고한다.
+
+> 서비스키는 반드시 **Decoding(원본)** 키를 넣는다. Encoding(`%2B` 등 포함) 키를 넣으면 이중 인코딩으로 인증 오류(코드 30)가 난다.
+
+## MCP 클라이언트 설정
+
+MCP 클라이언트에 아래 config를 추가한다:
 
 ```json
 {
@@ -31,56 +49,510 @@ MCP 클라이언트 설정에 아래 블록을 추가한다. `@latest`로 핀한
     "narajangteo-opening": {
       "command": "npx",
       "args": ["-y", "@opendata-kr/narajangteo-opening-mcp@latest"],
-      "env": {
-        "DATA_GO_KR_SERVICE_KEY": "여기에_Decoding_인증키"
-      }
+      "env": { "DATA_GO_KR_SERVICE_KEY": "발급받은_Decoding_키" }
     }
   }
 }
 ```
 
+> [!NOTE]
+> `@opendata-kr/narajangteo-opening-mcp@latest`를 쓰면 클라이언트가 항상 최신 버전을 받는다.
+
 > [!IMPORTANT]
-> `DATA_GO_KR_SERVICE_KEY`는 필수 시크릿이다. 원클릭·env 미지원 클라이언트는 설치 후 셸 환경변수로 키를 설정한다.
+> `DATA_GO_KR_SERVICE_KEY`(필수, **Decoding 원본** 키)가 없으면 첫 호출이 인증 오류(코드 30)로 실패한다. 위 config의 `env`에 키를 넣는다. 원클릭 버튼이나 env를 config에 담지 못하는 클라이언트는 설치 후 셸 환경변수로 `DATA_GO_KR_SERVICE_KEY`를 설정한다.
+
+### 클라이언트별 설정
+
+<details>
+  <summary>Amp</summary>
+  https://ampcode.com/manual#mcp 의 안내를 따르고 위 config를 사용한다. CLI로도 추가할 수 있다:
+
+```bash
+amp mcp add narajangteo-opening -- npx -y @opendata-kr/narajangteo-opening-mcp@latest
+```
+
+이후 생성된 설정의 `env`(또는 셸 환경변수)에 `DATA_GO_KR_SERVICE_KEY`를 추가한다.
+
+</details>
+
+<details>
+  <summary>Antigravity</summary>
+
+<a href="https://antigravity.google/docs/mcp">Antigravity 문서</a>의 커스텀 MCP 서버 추가 방법을 따라 아래 config를 MCP servers 설정에 넣는다:
+
+```json
+{
+  "mcpServers": {
+    "narajangteo-opening": {
+      "command": "npx",
+      "args": ["-y", "@opendata-kr/narajangteo-opening-mcp@latest"],
+      "env": { "DATA_GO_KR_SERVICE_KEY": "발급받은_Decoding_키" }
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+  <summary>Claude Code</summary>
+
+Claude Code CLI로 서버를 추가한다 (<a href="https://code.claude.com/docs/en/mcp">가이드</a>):
+
+```bash
+claude mcp add narajangteo-opening --scope user --env DATA_GO_KR_SERVICE_KEY=발급받은_Decoding_키 -- npx -y @opendata-kr/narajangteo-opening-mcp@latest
+```
+
+</details>
+
+<details>
+  <summary>Cline</summary>
+  https://docs.cline.bot/mcp/configuring-mcp-servers 의 안내를 따르고 위 config를 사용한다.
+</details>
+
+<details>
+  <summary>Codex</summary>
+  <a href="https://developers.openai.com/codex/mcp/#configure-with-the-cli">MCP 설정 가이드</a>를 따르고 위 config를 사용한다. Codex CLI로도 추가할 수 있다:
+
+```bash
+codex mcp add narajangteo-opening --env DATA_GO_KR_SERVICE_KEY=발급받은_Decoding_키 -- npx -y @opendata-kr/narajangteo-opening-mcp@latest
+```
+
+**Windows**
+
+`~/.codex/config.toml`에 `cmd /c` 래핑으로 추가한다:
+
+```toml
+[mcp_servers.narajangteo-opening]
+command = "cmd"
+args = ["/c", "npx", "-y", "@opendata-kr/narajangteo-opening-mcp@latest"]
+env = { DATA_GO_KR_SERVICE_KEY = "발급받은_Decoding_키" }
+```
+
+</details>
+
+<details>
+  <summary>Command Code</summary>
+
+Command Code CLI로 서버를 추가한다 (<a href="https://commandcode.ai/docs/mcp">MCP 가이드</a>):
+
+```bash
+cmd mcp add narajangteo-opening --scope user npx -y @opendata-kr/narajangteo-opening-mcp@latest
+```
+
+이후 생성된 설정의 `env`(또는 셸 환경변수)에 `DATA_GO_KR_SERVICE_KEY`를 추가한다.
+
+</details>
+
+<details>
+  <summary>Continue</summary>
+
+Continue의 <a href="https://docs.continue.dev/customize/deep-dives/mcp">MCP 가이드</a>를 따른다. Continue는 `mcpServers`를 배열로 쓴다:
+
+```json
+{
+  "mcpServers": [
+    {
+      "name": "narajangteo-opening",
+      "command": "npx",
+      "args": ["-y", "@opendata-kr/narajangteo-opening-mcp@latest"],
+      "env": { "DATA_GO_KR_SERVICE_KEY": "발급받은_Decoding_키" }
+    }
+  ]
+}
+```
+
+</details>
+
+<details>
+  <summary>Copilot CLI</summary>
+
+Copilot CLI를 시작한다:
+
+```
+copilot
+```
+
+MCP 서버 추가 대화를 연다:
+
+```
+/mcp add
+```
+
+다음 필드를 입력하고 `CTRL+S`로 저장한다:
+
+- **Server name:** `narajangteo-opening`
+- **Server Type:** `[1] Local`
+- **Command:** `npx -y @opendata-kr/narajangteo-opening-mcp@latest`
+- **Environment variables:** `DATA_GO_KR_SERVICE_KEY=발급받은_Decoding_키`
+
+</details>
+
+<details>
+  <summary>Copilot / VS Code</summary>
+
+**버튼으로 설치:**
+
+[<img src="https://img.shields.io/badge/VS_Code-Install_Server-0098FF?style=flat-square&logo=visualstudiocode&logoColor=white" alt="Install in VS Code">](https://vscode.dev/redirect/mcp/install?name=io.github.opendata-kr%2Fnarajangteo-opening&config=%7B%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40opendata-kr%2Fnarajangteo-opening-mcp%22%5D%2C%22env%22%3A%7B%7D%7D)
+
+[<img src="https://img.shields.io/badge/VS_Code_Insiders-Install_Server-24bfa5?style=flat-square&logo=visualstudiocode&logoColor=white" alt="Install in VS Code Insiders">](https://insiders.vscode.dev/redirect?url=vscode-insiders%3Amcp%2Finstall%3F%257B%2522name%2522%253A%2522io.github.opendata-kr%252Fnarajangteo-opening%2522%252C%2522config%2522%253A%257B%2522command%2522%253A%2522npx%2522%252C%2522args%2522%253A%255B%2522-y%2522%252C%2522%2540opendata-kr%252Fnarajangteo-opening-mcp%2522%255D%252C%2522env%2522%253A%257B%257D%257D%257D)
+
+> 버튼은 키를 담지 못한다. 설치 후 `.vscode/mcp.json`(또는 사용자 설정)의 `env`에 `DATA_GO_KR_SERVICE_KEY`를 추가한다.
+
+**직접 추가:**
+
+VS Code [MCP 설정 가이드](https://code.visualstudio.com/docs/copilot/chat/mcp-servers#_add-an-mcp-server)를 따르거나 CLI를 쓴다.
+
+macOS·Linux:
+
+```bash
+code --add-mcp '{"name":"narajangteo-opening","command":"npx","args":["-y","@opendata-kr/narajangteo-opening-mcp@latest"],"env":{"DATA_GO_KR_SERVICE_KEY":"발급받은_Decoding_키"}}'
+```
+
+Windows(PowerShell):
+
+```powershell
+code --add-mcp '{"""name""":"""narajangteo-opening""","""command""":"""npx""","""args""":["""-y""","""@opendata-kr/narajangteo-opening-mcp@latest"""],"""env""":{"""DATA_GO_KR_SERVICE_KEY""":"""발급받은_Decoding_키"""}}'
+```
+
+</details>
+
+<details>
+  <summary>Cursor</summary>
+
+**버튼으로 설치:**
+
+[<img src="https://cursor.com/deeplink/mcp-install-dark.svg" alt="Add narajangteo-opening MCP server to Cursor">](https://cursor.com/en/install-mcp?name=narajangteo-opening&config=eyJjb21tYW5kIjoibnB4IC15IEBvcGVuZGF0YS1rci9uYXJhamFuZ3Rlby1vcGVuaW5nLW1jcEBsYXRlc3QifQ==)
+
+> 버튼은 키를 담지 못한다. 설치 후 Cursor의 MCP 설정에서 `env`에 `DATA_GO_KR_SERVICE_KEY`를 추가한다.
+
+**직접 추가:**
+
+`Cursor Settings` → `MCP` → `New MCP Server`에서 위 config를 사용한다.
+
+</details>
+
+<details>
+  <summary>Factory CLI</summary>
+
+Factory CLI로 서버를 추가한다 (<a href="https://docs.factory.ai/cli/configuration/mcp">가이드</a>):
+
+```bash
+droid mcp add narajangteo-opening "npx -y @opendata-kr/narajangteo-opening-mcp@latest"
+```
+
+이후 생성된 설정의 `env`(또는 셸 환경변수)에 `DATA_GO_KR_SERVICE_KEY`를 추가한다.
+
+</details>
+
+<details>
+  <summary>Gemini CLI</summary>
+
+Gemini CLI로 서버를 추가한다.
+
+**프로젝트 범위:**
+
+```bash
+gemini mcp add narajangteo-opening npx -y @opendata-kr/narajangteo-opening-mcp@latest
+```
+
+**전역:**
+
+```bash
+gemini mcp add -s user narajangteo-opening npx -y @opendata-kr/narajangteo-opening-mcp@latest
+```
+
+또는 <a href="https://github.com/google-gemini/gemini-cli/blob/main/docs/tools/mcp-server.md#how-to-set-up-your-mcp-server">MCP 가이드</a>를 따르고 위 config를 쓴다. `~/.gemini/settings.json`의 서버 정의 `env`에 `DATA_GO_KR_SERVICE_KEY`를 추가한다.
+
+</details>
+
+<details>
+  <summary>Gemini Code Assist</summary>
+  <a href="https://cloud.google.com/gemini/docs/codeassist/use-agentic-chat-pair-programmer#configure-mcp-servers">MCP 설정 가이드</a>를 따르고 위 config를 사용한다.
+</details>
+
+<details>
+  <summary>Grok Build CLI</summary>
+
+```bash
+grok mcp add narajangteo-opening npx -y @opendata-kr/narajangteo-opening-mcp@latest
+```
+
+이후 생성된 설정의 `env`(또는 셸 환경변수)에 `DATA_GO_KR_SERVICE_KEY`를 추가한다. 더 많은 옵션은 <a href="https://docs.x.ai/build/features/skills-plugins-marketplaces">문서</a> 참고.
+
+</details>
+
+<details>
+  <summary>JetBrains AI Assistant & Junie</summary>
+
+`Settings | Tools | AI Assistant | Model Context Protocol (MCP)` → `Add`에서 위 config를 사용한다.
+Junie도 같은 방식으로 `Settings | Tools | Junie | MCP Settings` → `Add`에서 위 config를 사용한다.
+
+</details>
+
+<details>
+  <summary>Katalon Studio</summary>
+
+Katalon StudioAssist는 MCP 프록시를 통해 stdio 서버를 연결한다.
+
+**1단계:** <a href="https://docs.katalon.com/katalon-studio/studioassist/mcp-servers/setting-up-mcp-proxy-for-stdio-mcp-servers">MCP 프록시 설정 가이드</a>로 프록시를 설치한다.
+
+**2단계:** 프록시로 서버를 띄운다(같은 셸에 `DATA_GO_KR_SERVICE_KEY`를 export 한 상태):
+
+```bash
+DATA_GO_KR_SERVICE_KEY=발급받은_Decoding_키 mcp-proxy --transport streamablehttp --port 8080 -- npx -y @opendata-kr/narajangteo-opening-mcp@latest
+```
+
+**3단계:** StudioAssist에 다음 설정으로 서버를 추가한다:
+
+- **Connection URL:** `http://127.0.0.1:8080/mcp`
+- **Transport type:** `HTTP`
+
+</details>
+
+<details>
+  <summary>Kiro</summary>
+
+**Kiro Settings**에서 `Configure MCP` → `Open Workspace or User MCP Config` → 위 config를 사용한다.
+
+또는 **Activity Bar** → `Kiro` → `MCP Servers` → `Open MCP Config`에서 위 config를 사용한다.
+
+</details>
+
+<details>
+  <summary>Mistral Vibe</summary>
+
+`~/.vibe/config.toml`에 추가한다:
+
+```toml
+[[mcp_servers]]
+name = "narajangteo-opening"
+transport = "stdio"
+command = "npx"
+args = ["-y", "@opendata-kr/narajangteo-opening-mcp@latest"]
+env = { DATA_GO_KR_SERVICE_KEY = "발급받은_Decoding_키" }
+```
+
+</details>
+
+<details>
+  <summary>OpenCode</summary>
+
+`opencode.json`에 추가한다. 없으면 `~/.config/opencode/opencode.json`에 만든다 (<a href="https://opencode.ai/docs/mcp-servers">가이드</a>):
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "narajangteo-opening": {
+      "type": "local",
+      "command": ["npx", "-y", "@opendata-kr/narajangteo-opening-mcp@latest"],
+      "environment": { "DATA_GO_KR_SERVICE_KEY": "발급받은_Decoding_키" }
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+  <summary>Qoder</summary>
+
+**Qoder Settings**에서 `MCP Server` → `+ Add` → 위 config를 사용한다.
+
+또는 <a href="https://docs.qoder.com/user-guide/chat/model-context-protocol">MCP 가이드</a>를 따르고 위 config를 쓴다.
+
+</details>
+
+<details>
+  <summary>Qoder CLI</summary>
+
+Qoder CLI로 서버를 추가한다 (<a href="https://docs.qoder.com/cli/using-cli#mcp-servers">가이드</a>):
+
+**프로젝트 범위:**
+
+```bash
+qodercli mcp add narajangteo-opening -- npx @opendata-kr/narajangteo-opening-mcp@latest
+```
+
+**전역:**
+
+```bash
+qodercli mcp add -s user narajangteo-opening -- npx @opendata-kr/narajangteo-opening-mcp@latest
+```
+
+이후 생성된 설정의 `env`(또는 셸 환경변수)에 `DATA_GO_KR_SERVICE_KEY`를 추가한다.
+
+</details>
+
+<details>
+  <summary>Visual Studio</summary>
+
+**버튼으로 설치:**
+
+[<img src="https://img.shields.io/badge/Visual_Studio-Install-C16FDE?logo=visualstudio&logoColor=white" alt="Install in Visual Studio">](https://vs-open.link/mcp-install?%7B%22name%22%3A%22narajangteo-opening%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22%40opendata-kr%2Fnarajangteo-opening-mcp%40latest%22%5D%7D)
+
+> 버튼은 키를 담지 못한다. 설치 후 서버 설정의 `env`에 `DATA_GO_KR_SERVICE_KEY`를 추가한다.
+
+</details>
+
+<details>
+  <summary>Warp</summary>
+
+`Settings | AI | Manage MCP Servers` → `+ Add`에서 [MCP 서버를 추가](https://docs.warp.dev/knowledge-and-collaboration/mcp#adding-an-mcp-server)하고 위 config를 사용한다.
+
+</details>
+
+<details>
+  <summary>Windsurf</summary>
+  <a href="https://docs.windsurf.com/windsurf/cascade/mcp#mcp-config-json">MCP 설정 가이드</a>를 따르고 위 config를 사용한다. Windsurf는 `mcpServers` 키를 쓴다(`~/.codeium/windsurf/mcp_config.json`).
+</details>
+
+<details>
+  <summary>Zed</summary>
+
+`~/.config/zed/settings.json`에 추가한다(스키마는 Zed 버전에 따라 다를 수 있으니 <a href="https://zed.dev/docs/ai/mcp">Zed 공식 문서</a>를 확인):
+
+```json
+{
+  "context_servers": {
+    "narajangteo-opening": {
+      "command": { "path": "npx", "args": ["-y", "@opendata-kr/narajangteo-opening-mcp@latest"] },
+      "env": { "DATA_GO_KR_SERVICE_KEY": "발급받은_Decoding_키" }
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+  <summary>ChatGPT · 원격 전용 클라이언트</summary>
+
+ChatGPT Developer Mode처럼 **원격(HTTPS) MCP만 지원하는 클라이언트**는 로컬 stdio 서버를 직접 붙일 수 없다. stdio→HTTP 브리지(`mcp-proxy`)로 이 서버를 HTTP로 띄우고 공개 HTTPS 엔드포인트(리버스 프록시·터널·호스팅)로 노출한 뒤, 그 URL을 커넥터로 등록한다.
+
+```bash
+DATA_GO_KR_SERVICE_KEY=발급받은_Decoding_키 mcp-proxy --transport streamablehttp --port 8080 -- npx -y @opendata-kr/narajangteo-opening-mcp@latest
+```
+
+`http://127.0.0.1:8080/mcp`를 공개 HTTPS로 노출하는 것은 사용자 몫이다. (`mcp-remote`는 반대로 stdio 클라이언트를 원격 서버에 붙일 때 쓰는 도구라 여기엔 맞지 않는다.)
+
+</details>
+
+### 발견성
+
+이 서버는 MCP 레지스트리에 `io.github.opendata-kr/narajangteo-opening`으로 기술된다. [registry.modelcontextprotocol.io](https://registry.modelcontextprotocol.io)를 지원하는 클라이언트에서 검색·설치할 수 있다.
 
 ## 환경변수
 
-| 이름 | 필수 | 비밀 | 기본값 | 설명 |
+| 환경변수 | 필수 | 비밀 | 기본값 | 설명 |
 |---|---|---|---|---|
-| `DATA_GO_KR_SERVICE_KEY` | 예 | 예 | | 공공데이터포털 Decoding(원본) 인증키 |
-| `DATA_GO_KR_BASE_URL` | 아니오 | 아니오 | `https://apis.data.go.kr` | 게이트웨이 base URL 오버라이드 |
+| `DATA_GO_KR_SERVICE_KEY` | 예 | 예 | (없음) | 공공데이터포털 **Decoding(원본)** 인증키 |
+| `DATA_GO_KR_BASE_URL` | 아니오 | 아니오 | `https://apis.data.go.kr` | 게이트웨이 base 오버라이드 |
 
-## Tools
+## 도구
 
-조회 전용 도구 3종(`readOnlyHint`). 업무구분(`bidKind`) 미지정 시 물품/공사/용역/외자를 병렬 조회한다. 기간(`startDate`/`endDate`, YYYYMMDD)은 함께 지정하며 넓은 범위는 내부에서 월 단위로 분할한다.
+3개 도구 모두 읽기 전용 조회다(`readOnlyHint`). 업무구분(`bidKind`) 배열: `cnstwk`(공사) `servc`(용역) `thng`(물품) `frgcpt`(외자). 미지정 시 전 구분 병렬 조회한다. `startDate`/`endDate`(`YYYYMMDD`)는 함께 지정하며, 넓은 범위는 내부에서 창 단위로 분할해 순차 조회한다.
 
-| 도구 | 용도 | 주요 입력 | 반환 | 한계 |
-|---|---|---|---|---|
-| `search_awards` | 낙찰 결과·경쟁사·종단 조회 | `keyword`·`institution`·`demandInstitutionCode`·`region`·`industry`·`minPrice`/`maxPrice`·`bizno`·기간 | 업무구분별 `{ totalCount, items: 낙찰자[] }` | 낙찰자만(진 입찰 미포함). 사정률 예측·투찰가 산출은 비목표 |
-| `search_openings` | 개찰 진행·유찰/재입찰 발굴 | 위와 유사 + `status`(개찰완료/유찰/재입찰) | 업무구분별 `{ totalCountBeforeFilter, filteredCount, items: 개찰요약[] }` | `status`는 클라이언트 필터라 느림(좁혀 쓰기, `truncated`면 미완). 재입찰≠재공고 |
-| `get_bid_result` | 단일 공고 심층·딜 사후분석 | `bidNtceNo`(필수)·`bidKind`·`status`·`bidNtceOrd`/`bidClsfcNo`/`rbidNo`·`myBizno` | `{ executions: [{ award, opening, preparPrice, bidders, awardMethod }] }` | 낙찰방식 추정(협상계약만 점수, 적격심사는 금액·순위) |
+### `search_awards`
 
-### search_awards
-- 입력: `bidKind[]?`, `keyword?`, `institution?`, `demandInstitution?`, `demandInstitutionCode?`, `detailProductCode?`, `region?`, `industry?`, `minPrice?`/`maxPrice?`, `bizno?`, `startDate?`/`endDate?`, `dateType?`(posted|opened), `pageSize?`(≤100), `maxPages?`.
-- 반환 필드: `bidNtceNo`, `bidNtceNm`, `winner`, `winnerBizno`, `awardAmount`, `awardRate`(예정가 대비 %), `realOpeningDt`, `demandInstitution`, `finalAwardDate`, `participants`.
+나라장터 낙찰 결과(최종낙찰자)를 공고명·기관·수요기관(코드)·지역·업종·추정가·사업자번호·기간으로 검색한다. "누가 얼마에 낙찰받았나", 경쟁사(사업자번호) 낙찰 이력, 되풀이 사업의 종단 조회에 쓴다. 낙찰자만 반환하며 그 업체가 참여했으나 진 입찰은 미포함이다. 특정 공고의 개찰·투찰업체·예비가 상세는 `get_bid_result`, 개찰 진행·유찰 발굴은 `search_openings`를 쓴다.
 
-### search_openings
-- 입력: search_awards와 유사 + `status?`. 개찰결과는 응답이 느려 `pageSize` 기본 20·`maxPages` 기본 5.
-- 반환 필드: `progress`(개찰완료/유찰/재입찰), `openingDt`, `participants`, `topBidder`(1위 업체·투찰금액·투찰율), `reservePriceFileExists`, 유찰 시 `failReasonHint`(참가업체수 기반 추정).
+| 파라미터 | 타입 | 설명 |
+|---|---|---|
+| `bidKind` | `string[]` | 업무구분 배열. 미지정 시 전 구분 병렬 |
+| `keyword` | `string` | 공고명 부분검색(`bidNtceNm`) |
+| `institution` | `string` | 공고기관명(`ntceInsttNm`) |
+| `demandInstitution` | `string` | 수요기관명(`dminsttNm`) |
+| `demandInstitutionCode` | `string` | 수요기관코드(`dminsttCd`). 종단 식별에 안정적 |
+| `detailProductCode` | `string` | 세부품명번호(`dtilPrdctClsfcNo`) |
+| `region` | `string` | 참가제한지역명(`prtcptLmtRgnNm`) |
+| `industry` | `string` | 업종명(`indstrytyNm`) |
+| `minPrice` | `number` | 추정가격 하한(`presmptPrceBgn`) |
+| `maxPrice` | `number` | 추정가격 상한(`presmptPrceEnd`) |
+| `bizno` | `string` | 업체 사업자번호. 그 업체의 낙찰건만 조회(진 입찰은 미포함) |
+| `startDate` | `string` | 조회 시작일 `YYYYMMDD` |
+| `endDate` | `string` | 조회 종료일 `YYYYMMDD` |
+| `dateType` | `string` | 날짜 기준: `posted`(공고게시, 기본) `opened`(개찰) |
+| `pageSize` | `number` | 창당 페이지 크기(기본 100, 최대 100) |
+| `maxPages` | `number` | 창당 최대 페이지(기본 10, 최대 50) |
 
-### get_bid_result
-- 입력: `bidNtceNo`(필수), `bidKind?`, `status?`(completed|failing|rebid|all), `bidNtceOrd?`/`bidClsfcNo?`/`rbidNo?`(집행 좁힘), `myBizno?`(자사 투찰행 `isOurs` 표시).
-- 반환: `executions[]`(집행별) 각각 `award`(낙찰자), `opening`(개찰진행), `preparPrice`(예정가격·기초금액·사정률·복수예가), `bidders[]`(순위·투찰금액·투찰율·평가점수), `awardMethod`(추정). 파트별 실패는 해당 파트 `error`로 표면화.
+### `search_openings`
+
+나라장터 개찰결과 목록을 검색하고 진행상태(개찰완료/유찰/재입찰)로 필터한다. 유찰·재입찰 공고 발굴에 쓴다. `status`는 API 파라미터가 아니라 응답 기준 클라이언트 필터라 응답이 느리니 기관·업종·기간으로 좁혀 쓴다(`truncated: true`면 미완 스캔). 재입찰은 동일 공고 내 재입찰이며 재공고가 아니다(재공고는 입찰공고 서비스 소관). 최종낙찰자 검색은 `search_awards`, 단일 공고 상세는 `get_bid_result`를 쓴다.
+
+| 파라미터 | 타입 | 설명 |
+|---|---|---|
+| `bidKind` | `string[]` | 업무구분 배열. 미지정 시 전 구분 병렬 |
+| `keyword` | `string` | 공고명(`bidNtceNm`) |
+| `institution` | `string` | 공고기관명 |
+| `demandInstitution` | `string` | 수요기관명(`dminsttNm`) |
+| `region` | `string` | 참가제한지역명(`prtcptLmtRgnNm`, 예: 인천광역시) |
+| `industry` | `string` | 업종명(`indstrytyNm`) |
+| `status` | `string` | 진행상태 필터: `개찰완료` `유찰` `재입찰`(응답 `progrsDivCdNm` 기준 클라이언트 필터) |
+| `startDate` | `string` | 조회 시작일 `YYYYMMDD`(`endDate`와 함께 지정) |
+| `endDate` | `string` | 조회 종료일 `YYYYMMDD`(`startDate`와 함께 지정) |
+| `dateType` | `string` | 날짜 기준: `posted`(공고게시, 기본) `opened`(개찰) |
+| `pageSize` | `number` | 창당 페이지 크기(기본 20, 개찰결과는 느려 작게 권장) |
+| `maxPages` | `number` | 창당 최대 페이지(기본 5) |
+
+> 개찰결과 조회는 응답이 느리다(라이브 기준 20행 0.6초, 50행 9초, 100행은 타임아웃). 페이지 크기를 작게 유지하고 검색조건을 좁혀 쓴다.
+
+### `get_bid_result`
+
+입찰공고번호로 그 공고의 낙찰자·개찰진행·예비가격상세(사정률)·투찰업체별 순위/금액/점수를 복합키(공고번호+차수+분류+재입찰번호) 정합으로 단건 조회한다. 딜 사후분석·투찰가 참고에 쓴다. 다분류·다차수 공고는 집행 단위 배열로 분리한다. 낙찰방식은 추정이며(협상계약만 기술·가격 점수 제공, 적격심사는 금액·순위만), `myBizno`를 주면 자사 투찰행에 `isOurs`를 표시한다. 여러 공고를 조건으로 찾으려면 `search_awards` 또는 `search_openings`를 쓴다.
+
+| 파라미터 | 타입 | 설명 |
+|---|---|---|
+| `bidNtceNo` | `string` | 입찰공고번호(필수) |
+| `bidKind` | `string` | 업무구분. 미지정 시 A/B/C를 전 구분에서 조회 |
+| `status` | `string` | D(투찰업체별) 상태: `completed` `failing` `rebid` `all`(기본, 완료·유찰·재입찰 병렬) |
+| `bidNtceOrd` | `string` | 입찰공고차수. 특정 집행으로 좁힘 |
+| `bidClsfcNo` | `string` | 입찰분류번호. 특정 집행으로 좁힘 |
+| `rbidNo` | `string` | 재입찰번호. 특정 집행으로 좁힘 |
+| `myBizno` | `string` | 자사 사업자번호. 일치하는 투찰행에 `isOurs` 플래그 |
+
+모든 도구의 반환은 `search_awards`/`search_openings`가 `{ query, results }`(업무구분별로 `{ totalCount, items }` 또는 실패 시 `{ error }`), `get_bid_result`가 `{ bidNtceNo, executions, errors, notes }`다.
+
+## 응답 필드
+
+### `AwardResult` (계열 A, 최종낙찰자)
+
+`bidNtceNo`(입찰공고번호), `bidNtceNm`(공고명), `participants`(참가업체수), `winner`(낙찰자), `winnerBizno`(낙찰자 사업자번호), `winnerCeo`(낙찰자 대표자), `awardAmount`(낙찰금액), `awardRate`(낙찰률), `realOpeningDt`(실개찰일시), `demandInstitution`(수요기관), `finalAwardDate`(최종낙찰일자).
+
+### `OpeningSummary` (계열 B, 개찰진행)
+
+`bidNtceNo`, `bidNtceNm`, `openingDt`(개찰일시), `participants`(참가업체수), `progress`(진행상태: 개찰완료/유찰/재입찰), `topBidder`(1위 업체 `{ name, bizno, ceo, amount, rate }` 또는 `null`), `reservePriceFileExists`(예비가격 파일 존재 여부), `noticeInstitution`(공고기관), `demandInstitution`(수요기관), `failReasonHint`(유찰 시 참가업체수 기반 추정 사유, 선택).
+
+### `PreparPriceDetail` (계열 C, 예비가격상세·집행 단위 집약)
+
+`planPrice`(예정가격), `baseAmount`(기초금액), `saJeongRate`(사정률, 숫자 또는 `null`), `totalReserveCount`(총 복수예가수), `drawn`(추첨번호), `reserves`(복수예가 배열: `seq`·`basePlanPrice`).
+
+### `BidderDetail` (계열 D, 투찰업체별)
+
+`rank`(순위), `name`(업체명), `bizno`(사업자번호), `ceo`(대표자), `amount`(투찰금액), `rate`(투찰율), `remark`(비고), `priceScore`(가격점수), `techScore`(기술점수), `techRawScore`(기술평점), `totalScore`(합산점수), `bidDt`(투찰일시), `isOurs`(자사 여부, `myBizno` 일치 시 `true`).
 
 ## 개발
 
 ```bash
-nvm use
+nvm use            # Node 24
 pnpm install
-pnpm test
-pnpm typecheck
-pnpm build
+pnpm test          # vitest
+pnpm typecheck     # tsc --noEmit
+pnpm build         # tsup, dist/ 생성
 ```
 
-## License
+## 문제 해결
 
-MIT. [`LICENSE`](./LICENSE) 참조.
+- **인증 오류(코드 30)**: Encoding 키를 넣으면 이중 인코딩으로 실패한다. **Decoding(원본)** 키를 쓴다. 서버가 시작 시 Encoding 키로 보이면 경고 로그를 남긴다.
+- **개찰결과 조회가 느리거나 타임아웃**: `search_openings`는 응답이 무겁다. `pageSize`를 기본값(20) 이하로 유지하고 기관·업종·기간으로 조건을 좁힌다. `truncated: true`가 보이면 스캔이 끝나지 않은 것이다.
+- **결과코드 메시지**: 트래픽 초과, 인증키 만료 등 data.go.kr 결과코드는 한국어 메시지로 정규화되어 반환된다.
+- **도구 동작 점검**: MCP inspector로 직접 호출해 볼 수 있다.
+
+  ```bash
+  npx @modelcontextprotocol/inspector npx -y @opendata-kr/narajangteo-opening-mcp
+  ```
+
+## 라이선스
+
+[MIT](./LICENSE)
