@@ -60,3 +60,40 @@ describe("formatOpening", () => {
     expect(o.topBidder).toBeNull();
   });
 });
+
+import { aggregatePreparPrice, failReasonHint, estimateAwardMethod } from "./format.js";
+
+describe("aggregatePreparPrice", () => {
+  it("복수예가 여러 행을 집행 단위로 집약하고 사정률 산출", () => {
+    const items = [
+      { plnprc: "270648500", bssamt: "270499000", totRsrvtnPrceNum: "15", compnoRsrvtnPrceSno: "7", bsisPlnprc: "265727400", drwtYn: "Y" },
+      { plnprc: "270648500", bssamt: "270499000", totRsrvtnPrceNum: "15", compnoRsrvtnPrceSno: "8", bsisPlnprc: "266000000", drwtYn: "Y" },
+    ];
+    const r = aggregatePreparPrice(items);
+    expect(r.planPrice).toBe("270648500");
+    expect(r.baseAmount).toBe("270499000");
+    expect(r.saJeongRate).toBeCloseTo(270648500 / 270499000, 6);
+    expect(r.reserves.length).toBe(2);
+  });
+  it("빈 목록·기초금액 0이면 사정률 null", () => {
+    expect(aggregatePreparPrice([]).saJeongRate).toBeNull();
+    expect(aggregatePreparPrice([{ plnprc: "100", bssamt: "0" }]).saJeongRate).toBeNull();
+  });
+});
+
+describe("failReasonHint", () => {
+  it("참가업체수로 유찰 사유 추론", () => {
+    expect(failReasonHint("0")).toContain("무응찰");
+    expect(failReasonHint("1")).toContain("단독응찰");
+    expect(failReasonHint("3")).toContain("적격자");
+  });
+});
+
+describe("estimateAwardMethod", () => {
+  it("점수 채움이면 협상계약 추정", () => {
+    expect(estimateAwardMethod([{ totalScore: "91.08", techScore: "81.5" } as any]).method).toBe("negotiated");
+  });
+  it("점수 없으면 적격·기타 추정", () => {
+    expect(estimateAwardMethod([{ totalScore: "", techScore: "" } as any]).method).toBe("qualification_or_other");
+  });
+});
