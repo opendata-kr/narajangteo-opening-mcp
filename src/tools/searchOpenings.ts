@@ -1,7 +1,9 @@
 import { z } from "zod";
-import type { DataGoKrClient } from "@opendata-kr/core";
+import {
+  splitCalendarMonths, fetchWindows, fetchAllPages, fanOut, withKeyHint, errMessage,
+  type DataGoKrClient, type RawItem, type FailedWindow,
+} from "@opendata-kr/core";
 import { ALL_BID_KINDS, openingSearchOp, openingInqryDiv, type BidKind, type DateType } from "../api/endpoints.js";
-import { splitDateWindows, fetchAllPages } from "../api/dateWindow.js";
 import { formatOpening, failReasonHint } from "../format.js";
 import type { OpeningSummary } from "../api/types.js";
 
@@ -26,7 +28,9 @@ export type SearchOpeningsArgs = {
   startDate?: string; endDate?: string; dateType?: "posted" | "opened"; pageSize?: number; maxPages?: number;
 };
 
-type KindResult = { totalCountBeforeFilter: number; filteredCount: number; items: OpeningSummary[]; truncated: boolean } | { error: string };
+type KindResult =
+  | { totalCountBeforeFilter: number; filteredCount: number; items: OpeningSummary[]; truncated: boolean; failedWindows: FailedWindow[] }
+  | { error: string };
 export interface SearchOpeningsResult { query: SearchOpeningsArgs; results: Partial<Record<BidKind, KindResult>>; notes: string[]; }
 
 export async function runSearchOpenings(client: DataGoKrClient, args: SearchOpeningsArgs): Promise<SearchOpeningsResult> {
@@ -44,40 +48,48 @@ export async function runSearchOpenings(client: DataGoKrClient, args: SearchOpen
     inqryDiv, bidNtceNm: args.keyword, ntceInsttNm: args.institution, dminsttNm: args.demandInstitution,
     prtcptLmtRgnNm: args.region, indstrytyNm: args.industry,
   };
-  const windows = args.startDate && args.endDate
-    ? splitDateWindows(args.startDate, args.endDate)
-    : [{ bgn: undefined as string | undefined, end: undefined as string | undefined }];
   // 개찰결과(계열 B)는 응답이 무겁고 느려 큰 페이지는 타임아웃한다(라이브: 20행 0.6초, 50행 9초, 100행 타임아웃).
-  // 기본 페이지를 작게 둔다.
+  // 기본 페이지를 작게 두고, window는 순차(concurrency 1)로 처리해 동시 부하를 막는다.
   const pageSize = args.pageSize ?? 20, maxPages = args.maxPages ?? 5;
+  const call = (op: string, p: Record<string, string | number | undefined>) => client.call(op, p);
 
-  const settled = await Promise.allSettled(kinds.map(async (kind) => {
-    const all: OpeningSummary[] = [];
-    let before = 0, truncated = false;
-    for (const w of windows) {
-      const r = await fetchAllPages((op, p) => client.call(op, p), openingSearchOp(kind), { ...base, inqryBgnDt: w.bgn, inqryEndDt: w.end }, { pageSize, maxPages });
-      before += r.totalCount; truncated = truncated || r.truncated;
-      for (const raw of r.items) {
-        const o = formatOpening(raw);
-        if (o.progress === "유찰") o.failReasonHint = failReasonHint(o.participants);
-        all.push(o);
-      }
+  const task = async (kind: BidKind): Promise<Exclude<KindResult, { error: string }>> => {
+    let raw: RawItem[] = [], totalCountBeforeFilter = 0, truncated = false;
+    let failedWindows: FailedWindow[] = [];
+    if (args.startDate && args.endDate) {
+      const w = await fetchWindows(call, openingSearchOp(kind), base, splitCalendarMonths(args.startDate, args.endDate), { pageSize, maxPages, concurrency: 1 });
+      raw = w.items; totalCountBeforeFilter = w.totalCount; truncated = w.truncated; failedWindows = w.failedWindows;
+    } else {
+      const p = await fetchAllPages(call, openingSearchOp(kind), base, { pageSize, maxPages });
+      raw = p.items; totalCountBeforeFilter = p.totalCount; truncated = p.truncated;
     }
+    const all = raw.map((r) => {
+      const o = formatOpening(r);
+      if (o.progress === "유찰") o.failReasonHint = failReasonHint(o.participants);
+      return o;
+    });
     const items = args.status ? all.filter((o) => o.progress === args.status) : all;
-    return { totalCountBeforeFilter: before, filteredCount: items.length, items, truncated };
-  }));
+    return { totalCountBeforeFilter, filteredCount: items.length, items, truncated, failedWindows };
+  };
+
+  const { results: outcomes } = await fanOut(kinds, task, {
+    label: (k) => k,
+    concurrency: 4,
+    mapError: (e) => withKeyHint(client, errMessage(e)),
+  });
 
   const results: Partial<Record<BidKind, KindResult>> = {};
-  kinds.forEach((kind, i) => {
-    const s = settled[i]!;
-    results[kind] = s.status === "fulfilled" ? s.value : { error: s.reason instanceof Error ? s.reason.message : String(s.reason) };
-  });
+  for (const kind of kinds) {
+    const o = outcomes[kind];
+    results[kind] = o.ok ? o.value : { error: o.error };
+  }
   return {
     query: args, results,
     notes: [
       "status는 응답 progrsDivCdNm 기준 클라이언트 필터다(API 요청 파라미터 아님). totalCountBeforeFilter는 필터 전 값.",
       "재입찰은 동일 공고 내 재입찰이며 재공고가 아니다(재공고는 입찰공고 서비스 소관).",
       "개찰결과 조회는 응답이 느리다. 페이지 크기를 작게(기본 20) 유지하고 검색조건(기관·업종·기간)을 좁혀 쓴다.",
+      "여러 창은 캘린더 월 경계로 분할하며 창은 순차 조회한다. 일부 창이 실패하면 failedWindows에 담기고 나머지 성공분은 반환한다(부분 결과일 수 있음).",
     ],
   };
 }
