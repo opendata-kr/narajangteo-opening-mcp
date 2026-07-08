@@ -1,7 +1,9 @@
 import { z } from "zod";
-import type { DataGoKrClient } from "@opendata-kr/core";
+import {
+  splitCalendarMonths, fetchWindows, fetchAllPages, fanOut, withKeyHint, errMessage,
+  type DataGoKrClient, type RawItem, type FailedWindow,
+} from "@opendata-kr/core";
 import { ALL_BID_KINDS, awardSearchOp, awardInqryDiv, type BidKind, type DateType } from "../api/endpoints.js";
-import { splitDateWindows, fetchAllPages } from "../api/dateWindow.js";
 import { formatAward } from "../format.js";
 import type { AwardResult } from "../api/types.js";
 
@@ -31,7 +33,9 @@ export type SearchAwardsArgs = {
   dateType?: "posted" | "opened"; pageSize?: number; maxPages?: number;
 };
 
-type KindResult = { totalCount: number; items: AwardResult[]; truncated: boolean } | { error: string };
+type KindResult =
+  | { totalCount: number; items: AwardResult[]; truncated: boolean; failedWindows: FailedWindow[] }
+  | { error: string };
 export interface SearchAwardsResult { query: SearchAwardsArgs; results: Partial<Record<BidKind, KindResult>>; notes: string[]; }
 
 export async function runSearchAwards(client: DataGoKrClient, args: SearchAwardsArgs): Promise<SearchAwardsResult> {
@@ -53,35 +57,39 @@ export async function runSearchAwards(client: DataGoKrClient, args: SearchAwards
     throw new Error("startDate가 endDate보다 늦습니다.");
   }
 
-  const windows = args.startDate && args.endDate
-    ? splitDateWindows(args.startDate, args.endDate)
-    : [{ bgn: undefined as string | undefined, end: undefined as string | undefined }];
   const pageSize = args.pageSize ?? 100;
   const maxPages = args.maxPages ?? 10;
+  const call = (op: string, p: Record<string, string | number | undefined>) => client.call(op, p);
 
-  const settled = await Promise.allSettled(kinds.map(async (kind) => {
-    const items: AwardResult[] = [];
-    let totalCount = 0, truncated = false;
-    for (const w of windows) {
-      const params = { ...base, inqryBgnDt: w.bgn, inqryEndDt: w.end };
-      const r = await fetchAllPages((op, p) => client.call(op, p), awardSearchOp(kind), params, { pageSize, maxPages });
-      items.push(...r.items.map(formatAward));
-      totalCount += r.totalCount;
-      truncated = truncated || r.truncated;
+  const task = async (kind: BidKind): Promise<Exclude<KindResult, { error: string }>> => {
+    let raw: RawItem[] = [], totalCount = 0, truncated = false;
+    let failedWindows: FailedWindow[] = [];
+    if (args.startDate && args.endDate) {
+      const w = await fetchWindows(call, awardSearchOp(kind), base, splitCalendarMonths(args.startDate, args.endDate), { pageSize, maxPages, concurrency: 1 });
+      raw = w.items; totalCount = w.totalCount; truncated = w.truncated; failedWindows = w.failedWindows;
+    } else {
+      const p = await fetchAllPages(call, awardSearchOp(kind), base, { pageSize, maxPages });
+      raw = p.items; totalCount = p.totalCount; truncated = p.truncated;
     }
-    return { totalCount, items, truncated };
-  }));
+    return { totalCount, items: raw.map(formatAward), truncated, failedWindows };
+  };
+
+  const { results: outcomes } = await fanOut(kinds, task, {
+    label: (k) => k,
+    concurrency: 4,
+    mapError: (e) => withKeyHint(client, errMessage(e)),
+  });
 
   const results: Partial<Record<BidKind, KindResult>> = {};
-  kinds.forEach((kind, i) => {
-    const s = settled[i]!;
-    results[kind] = s.status === "fulfilled" ? s.value : { error: s.reason instanceof Error ? s.reason.message : String(s.reason) };
-  });
+  for (const kind of kinds) {
+    const o = outcomes[kind];
+    results[kind] = o.ok ? o.value : { error: o.error };
+  }
   return {
     query: args, results,
     notes: [
       "낙찰자만 조회한다(그 업체가 참여했으나 진 입찰은 이 API로 도달 불가).",
-      "여러 창(주 단위 분할)의 totalCount 합은 창별 합계다.",
+      "여러 창은 캘린더 월 경계로 분할하며 창은 순차 조회한다. 일부 창이 실패하면 failedWindows에 담기고 totalCount는 성공 창 합계다.",
     ],
   };
 }
