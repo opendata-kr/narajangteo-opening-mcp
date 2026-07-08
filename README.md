@@ -516,6 +516,8 @@ DATA_GO_KR_SERVICE_KEY=발급받은_Decoding_키 mcp-proxy --transport streamabl
 
 ## 응답 필드
 
+검색 도구(`search_awards`·`search_openings`)는 업무구분별 `results` 맵을 반환한다. 각 구분은 `{ totalCount(BeforeFilter), items, truncated, failedWindows } | { error }`다. 기간을 지정하면 캘린더 월 경계로 나눈 창을 순차 조회하고, 일부 창이 실패해도 나머지 성공분을 반환하며 실패한 창은 `failedWindows`(창·사유)에 담아 부분 결과임을 드러낸다.
+
 ### `AwardResult` (계열 A, 최종낙찰자)
 
 `bidNtceNo`(입찰공고번호), `bidNtceNm`(공고명), `participants`(참가업체수), `winner`(낙찰자), `winnerBizno`(낙찰자 사업자번호), `winnerCeo`(낙찰자 대표자), `awardAmount`(낙찰금액), `awardRate`(낙찰률), `realOpeningDt`(실개찰일시), `demandInstitution`(수요기관), `finalAwardDate`(최종낙찰일자).
