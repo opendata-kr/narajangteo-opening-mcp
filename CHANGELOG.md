@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.3.0](https://github.com/opendata-kr/narajangteo-opening-mcp/compare/v0.2.1...v0.3.0) (2026-07-08)
+
+
+### Features
+
+* **search:** searchAwards를 core fanOut·fetchWindows로 마이그레이션·failedWindows 표면화 ([043234c](https://github.com/opendata-kr/narajangteo-opening-mcp/commit/043234c41bca85d1fe6a163a9eb211648b08bfd6))
+* **search:** searchOpenings를 core fanOut·fetchWindows로 마이그레이션·failedWindows 표면화 ([b5d61b0](https://github.com/opendata-kr/narajangteo-opening-mcp/commit/b5d61b058c32c34cf9116a9ab4cf8d4673a70803))
+
+
+### Documentation
+
+* **readme:** 검색 결과 failedWindows 부분실패 필드 문서화 ([f7c2682](https://github.com/opendata-kr/narajangteo-opening-mcp/commit/f7c2682102319e06f5f056aef08e88257199abf6))
+
+
+### Refactor
+
+* **api:** 로컬 dateWindow 제거(core 0.3.0 splitCalendarMonths·fetchAllPages로 대체) ([32093cb](https://github.com/opendata-kr/narajangteo-opening-mcp/commit/32093cb9851b4605994e5933809e8b49868bf8a5))
+
 ## [0.2.1](https://github.com/opendata-kr/narajangteo-opening-mcp/compare/v0.2.0...v0.2.1) (2026-07-07)
 
 
