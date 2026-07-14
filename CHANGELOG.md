@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/opendata-kr/narajangteo-opening-mcp/compare/v0.3.0...v0.4.0) (2026-07-14)
+
+
+### Features
+
+* **api:** core 0.4.1 스키마 검증 전송으로 이행, invalidCount·트래픽 소모 노출 ([#6](https://github.com/opendata-kr/narajangteo-opening-mcp/issues/6)) ([38bce7e](https://github.com/opendata-kr/narajangteo-opening-mcp/commit/38bce7e29972ef59d1f8574aae2d17d687826c1b))
+
 ## [0.3.0](https://github.com/opendata-kr/narajangteo-opening-mcp/compare/v0.2.1...v0.3.0) (2026-07-08)
 
 
