@@ -25,17 +25,22 @@ export const D_OPERATION: Record<OpeningStatus, string> = {
 // 날짜 기준. posted=공고(게시), opened=개찰, notice=공고번호 단건.
 export type DateType = "posted" | "opened" | "notice";
 
+// inqryDiv 반환은 리터럴 유니온으로 좁혀 오조립(잘못된 코드값 전달)을 컴파일에서 막는다.
+export type AwardInqryDiv = "1" | "2" | "3" | "4";
+export type OpeningInqryDiv = "1" | "2" | "3" | "4";
+export type PreparInqryDiv = "1" | "2";
+
 // A 기본판: 1등록 2공고 3개찰 4공고번호 / A PPSSrch: 1공고게시 2개찰 3공고번호
-export function awardInqryDiv(dateType: DateType, ppsSrch: boolean): string {
+export function awardInqryDiv(dateType: DateType, ppsSrch: boolean): AwardInqryDiv {
   if (ppsSrch) return dateType === "notice" ? "3" : dateType === "opened" ? "2" : "1";
   return dateType === "notice" ? "4" : dateType === "opened" ? "3" : "2";
 }
 // B 기본판: 1입력 2공고 3개찰 4공고번호 / B PPSSrch: A PPSSrch와 동일
-export function openingInqryDiv(dateType: DateType, ppsSrch: boolean): string {
+export function openingInqryDiv(dateType: DateType, ppsSrch: boolean): OpeningInqryDiv {
   if (ppsSrch) return dateType === "notice" ? "3" : dateType === "opened" ? "2" : "1";
   return dateType === "notice" ? "4" : dateType === "opened" ? "3" : "2";
 }
 // 계열 C 예비가격상세: 1입력일시 2입찰공고번호 (PPSSrch 없음)
-export function preparInqryDiv(byNotice: boolean): string {
+export function preparInqryDiv(byNotice: boolean): PreparInqryDiv {
   return byNotice ? "2" : "1";
 }
