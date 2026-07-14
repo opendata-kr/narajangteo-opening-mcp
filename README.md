@@ -448,11 +448,11 @@ DATA_GO_KR_SERVICE_KEY=발급받은_Decoding_키 mcp-proxy --transport streamabl
 | 환경변수 | 필수 | 비밀 | 기본값 | 설명 |
 |---|---|---|---|---|
 | `DATA_GO_KR_SERVICE_KEY` | 예 | 예 | (없음) | 공공데이터포털 **Decoding(원본)** 인증키 |
-| `DATA_GO_KR_BASE_URL` | 아니오 | 아니오 | `https://apis.data.go.kr` | 게이트웨이 base 오버라이드 |
+| `DATA_GO_KR_BASE_URL` | 아니오 | 아니오 | `https://apis.data.go.kr/1230000/as/ScsbidInfoService` | 서비스 경로를 포함한 전체 URL 오버라이드 |
 
 ## 도구
 
-3개 도구 모두 읽기 전용 조회다(`readOnlyHint`). 업무구분(`bidKind`) 배열: `cnstwk`(공사) `servc`(용역) `thng`(물품) `frgcpt`(외자). 미지정 시 전 구분 병렬 조회한다. `startDate`/`endDate`(`YYYYMMDD`)는 함께 지정하며, 넓은 범위는 내부에서 창 단위로 분할해 순차 조회한다.
+3개 도구 모두 읽기 전용 조회다(`readOnlyHint`). 업무구분(`bidKind`) 배열: `cnstwk`(공사) `servc`(용역) `thng`(물품) `frgcpt`(외자). 미지정 시 전 구분 병렬 조회한다(API 요청이 구분 수만큼 배수 소모되니 아는 구분은 지정한다). `startDate`/`endDate`(`YYYYMMDD`)는 함께 지정하며, 넓은 범위는 내부에서 창 단위로 분할해 순차 조회한다.
 
 ### `search_awards`
 
@@ -460,7 +460,7 @@ DATA_GO_KR_SERVICE_KEY=발급받은_Decoding_키 mcp-proxy --transport streamabl
 
 | 파라미터 | 타입 | 설명 |
 |---|---|---|
-| `bidKind` | `string[]` | 업무구분 배열. 미지정 시 전 구분 병렬 |
+| `bidKind` | `string[]` | 업무구분 배열. 미지정 시 전 구분 병렬(API 요청 4배 소모) |
 | `keyword` | `string` | 공고명 부분검색(`bidNtceNm`) |
 | `institution` | `string` | 공고기관명(`ntceInsttNm`) |
 | `demandInstitution` | `string` | 수요기관명(`dminsttNm`) |
@@ -483,7 +483,7 @@ DATA_GO_KR_SERVICE_KEY=발급받은_Decoding_키 mcp-proxy --transport streamabl
 
 | 파라미터 | 타입 | 설명 |
 |---|---|---|
-| `bidKind` | `string[]` | 업무구분 배열. 미지정 시 전 구분 병렬 |
+| `bidKind` | `string[]` | 업무구분 배열. 미지정 시 전 구분 병렬(API 요청 4배 소모) |
 | `keyword` | `string` | 공고명(`bidNtceNm`) |
 | `institution` | `string` | 공고기관명 |
 | `demandInstitution` | `string` | 수요기관명(`dminsttNm`) |
@@ -505,18 +505,18 @@ DATA_GO_KR_SERVICE_KEY=발급받은_Decoding_키 mcp-proxy --transport streamabl
 | 파라미터 | 타입 | 설명 |
 |---|---|---|
 | `bidNtceNo` | `string` | 입찰공고번호(필수) |
-| `bidKind` | `string` | 업무구분. 미지정 시 A/B/C를 전 구분에서 조회 |
+| `bidKind` | `string` | 업무구분. 미지정 시 A/B/C를 전 구분에서 조회(API 요청 12건, 지정 시 3건) |
 | `status` | `string` | D(투찰업체별) 상태: `completed` `failing` `rebid` `all`(기본, 완료·유찰·재입찰 병렬) |
 | `bidNtceOrd` | `string` | 입찰공고차수. 특정 집행으로 좁힘 |
 | `bidClsfcNo` | `string` | 입찰분류번호. 특정 집행으로 좁힘 |
 | `rbidNo` | `string` | 재입찰번호. 특정 집행으로 좁힘 |
 | `myBizno` | `string` | 자사 사업자번호. 일치하는 투찰행에 `isOurs` 플래그 |
 
-모든 도구의 반환은 `search_awards`/`search_openings`가 `{ query, results }`(업무구분별로 `{ totalCount, items }` 또는 실패 시 `{ error }`), `get_bid_result`가 `{ bidNtceNo, executions, errors, notes }`다.
+모든 도구의 반환은 `search_awards`/`search_openings`가 `{ query, results }`(업무구분별로 `{ totalCount, invalidCount, items }` 또는 실패 시 `{ error }`), `get_bid_result`가 `{ bidNtceNo, executions, errors, invalidCount, notes }`다. `invalidCount`는 응답 스키마 검증에서 탈락해 `items`에서 제외된 건수다. 0이 아니면 API 응답 필드가 예고 없이 바뀐 신호이므로 [이슈로 알려주면](https://github.com/opendata-kr/narajangteo-opening-mcp/issues) 반영한다.
 
 ## 응답 필드
 
-검색 도구(`search_awards`·`search_openings`)는 업무구분별 `results` 맵을 반환한다. 각 구분은 `{ totalCount(BeforeFilter), items, truncated, failedWindows } | { error }`다. 기간을 지정하면 캘린더 월 경계로 나눈 창을 순차 조회하고, 일부 창이 실패해도 나머지 성공분을 반환하며 실패한 창은 `failedWindows`(창·사유)에 담아 부분 결과임을 드러낸다.
+검색 도구(`search_awards`·`search_openings`)는 업무구분별 `results` 맵을 반환한다. 각 구분은 `{ totalCount(BeforeFilter), invalidCount, items, truncated, failedWindows } | { error }`다. 기간을 지정하면 캘린더 월 경계로 나눈 창을 순차 조회하고, 일부 창이 실패해도 나머지 성공분을 반환하며 실패한 창은 `failedWindows`(창·사유)에 담아 부분 결과임을 드러낸다.
 
 ### `AwardResult` (계열 A, 최종낙찰자)
 

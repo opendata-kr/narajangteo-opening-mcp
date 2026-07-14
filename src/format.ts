@@ -1,10 +1,10 @@
-import type { RawItem } from "@opendata-kr/core";
+import type {
+  CompositeSource, RawAward, RawOpening, RawBidder, RawPreparPrice,
+} from "./api/schema.js";
 import type { AwardResult, OpeningSummary, BidderDetail, TopBidder, PreparPriceDetail } from "./api/types.js";
 
-const pick = (raw: RawItem, k: string): string => raw[k] ?? "";
-
-export function compositeKeyOf(raw: RawItem): string {
-  return `${pick(raw, "bidNtceNo")}|${pick(raw, "bidNtceOrd")}|${pick(raw, "bidClsfcNo")}|${pick(raw, "rbidNo")}`;
+export function compositeKeyOf(raw: CompositeSource): string {
+  return `${raw.bidNtceNo}|${raw.bidNtceOrd ?? ""}|${raw.bidClsfcNo ?? ""}|${raw.rbidNo ?? ""}`;
 }
 
 export function parseOpengCorpInfo(s: string): TopBidder | null {
@@ -13,45 +13,45 @@ export function parseOpengCorpInfo(s: string): TopBidder | null {
   return { name, bizno, ceo, amount, rate };
 }
 
-export function formatAward(raw: RawItem): AwardResult {
+export function formatAward(raw: RawAward): AwardResult {
   return {
-    bidNtceNo: pick(raw, "bidNtceNo"), bidNtceNm: pick(raw, "bidNtceNm"), participants: pick(raw, "prtcptCnum"),
-    winner: pick(raw, "bidwinnrNm"), winnerBizno: pick(raw, "bidwinnrBizno"), winnerCeo: pick(raw, "bidwinnrCeoNm"),
-    awardAmount: pick(raw, "sucsfbidAmt"), awardRate: pick(raw, "sucsfbidRate"), realOpeningDt: pick(raw, "rlOpengDt"),
-    demandInstitution: pick(raw, "dminsttNm"), finalAwardDate: pick(raw, "fnlSucsfDate"),
+    bidNtceNo: raw.bidNtceNo, bidNtceNm: raw.bidNtceNm ?? "", participants: raw.prtcptCnum ?? "",
+    winner: raw.bidwinnrNm ?? "", winnerBizno: raw.bidwinnrBizno ?? "", winnerCeo: raw.bidwinnrCeoNm ?? "",
+    awardAmount: raw.sucsfbidAmt ?? "", awardRate: raw.sucsfbidRate ?? "", realOpeningDt: raw.rlOpengDt ?? "",
+    demandInstitution: raw.dminsttNm ?? "", finalAwardDate: raw.fnlSucsfDate ?? "",
   };
 }
 
-export function formatOpening(raw: RawItem): OpeningSummary {
+export function formatOpening(raw: RawOpening): OpeningSummary {
   return {
-    bidNtceNo: pick(raw, "bidNtceNo"), bidNtceNm: pick(raw, "bidNtceNm"), openingDt: pick(raw, "opengDt"),
-    participants: pick(raw, "prtcptCnum"), progress: pick(raw, "progrsDivCdNm"),
-    topBidder: parseOpengCorpInfo(pick(raw, "opengCorpInfo")),
-    reservePriceFileExists: pick(raw, "rsrvtnPrceFileExistnceYn"),
-    noticeInstitution: pick(raw, "ntceInsttNm"), demandInstitution: pick(raw, "dminsttNm"),
+    bidNtceNo: raw.bidNtceNo, bidNtceNm: raw.bidNtceNm ?? "", openingDt: raw.opengDt ?? "",
+    participants: raw.prtcptCnum ?? "", progress: raw.progrsDivCdNm ?? "",
+    topBidder: parseOpengCorpInfo(raw.opengCorpInfo ?? ""),
+    reservePriceFileExists: raw.rsrvtnPrceFileExistnceYn ?? "",
+    noticeInstitution: raw.ntceInsttNm ?? "", demandInstitution: raw.dminsttNm ?? "",
   };
 }
 
-export function formatBidder(raw: RawItem): BidderDetail {
+export function formatBidder(raw: RawBidder): BidderDetail {
   return {
-    rank: pick(raw, "opengRank"), name: pick(raw, "prcbdrNm"), bizno: pick(raw, "prcbdrBizno"), ceo: pick(raw, "prcbdrCeoNm"),
-    amount: pick(raw, "bidprcAmt"), rate: pick(raw, "bidprcrt"), remark: pick(raw, "rmrk"),
-    priceScore: pick(raw, "bidPrceEvlVal"), techScore: pick(raw, "techEvlVal"), techRawScore: pick(raw, "techEvlNaturVal"),
-    totalScore: pick(raw, "totalEvlAmtVal"), bidDt: pick(raw, "bidprcDt"),
+    rank: raw.opengRank ?? "", name: raw.prcbdrNm ?? "", bizno: raw.prcbdrBizno ?? "", ceo: raw.prcbdrCeoNm ?? "",
+    amount: raw.bidprcAmt ?? "", rate: raw.bidprcrt ?? "", remark: raw.rmrk ?? "",
+    priceScore: raw.bidPrceEvlVal ?? "", techScore: raw.techEvlVal ?? "", techRawScore: raw.techEvlNaturVal ?? "",
+    totalScore: raw.totalEvlAmtVal ?? "", bidDt: raw.bidprcDt ?? "",
   };
 }
 
-export function aggregatePreparPrice(items: RawItem[]): PreparPriceDetail {
+export function aggregatePreparPrice(items: RawPreparPrice[]): PreparPriceDetail {
   const first = items[0];
-  const planPrice = first ? pick(first, "plnprc") : "";
-  const baseAmount = first ? pick(first, "bssamt") : "";
+  const planPrice = first?.plnprc ?? "";
+  const baseAmount = first?.bssamt ?? "";
   const p = Number(planPrice), b = Number(baseAmount);
   const saJeongRate = first && b > 0 && Number.isFinite(p) && Number.isFinite(b) ? p / b : null;
   return {
     planPrice, baseAmount, saJeongRate,
-    totalReserveCount: first ? pick(first, "totRsrvtnPrceNum") : "",
-    drawn: first ? pick(first, "drwtYn") : "",
-    reserves: items.map((r) => ({ seq: pick(r, "compnoRsrvtnPrceSno"), basePlanPrice: pick(r, "bsisPlnprc") })),
+    totalReserveCount: first?.totRsrvtnPrceNum ?? "",
+    drawn: first?.drwtYn ?? "",
+    reserves: items.map((r) => ({ seq: r.compnoRsrvtnPrceSno ?? "", basePlanPrice: r.bsisPlnprc ?? "" })),
   };
 }
 

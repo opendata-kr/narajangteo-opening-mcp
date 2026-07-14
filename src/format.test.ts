@@ -36,7 +36,7 @@ describe("compositeKeyOf", () => {
 
 describe("formatBidder", () => {
   it("투찰업체 상세 + 협상계약 점수", () => {
-    const raw = { opengRank: "1", prcbdrNm: "주식회사 예신뷰", prcbdrBizno: "6438701544", bidprcAmt: "100111000", bidprcrt: "91.01", bidPrceEvlVal: "9.5894", techEvlVal: "81.5", totalEvlAmtVal: "91.0894" };
+    const raw = { bidNtceNo: "N1", opengRank: "1", prcbdrNm: "주식회사 예신뷰", prcbdrBizno: "6438701544", bidprcAmt: "100111000", bidprcrt: "91.01", bidPrceEvlVal: "9.5894", techEvlVal: "81.5", totalEvlAmtVal: "91.0894" };
     const b = formatBidder(raw);
     expect(b.rank).toBe("1");
     expect(b.amount).toBe("100111000");
@@ -64,8 +64,8 @@ describe("formatOpening", () => {
 describe("aggregatePreparPrice", () => {
   it("복수예가 여러 행을 집행 단위로 집약하고 사정률 산출", () => {
     const items = [
-      { plnprc: "270648500", bssamt: "270499000", totRsrvtnPrceNum: "15", compnoRsrvtnPrceSno: "7", bsisPlnprc: "265727400", drwtYn: "Y" },
-      { plnprc: "270648500", bssamt: "270499000", totRsrvtnPrceNum: "15", compnoRsrvtnPrceSno: "8", bsisPlnprc: "266000000", drwtYn: "Y" },
+      { bidNtceNo: "N1", plnprc: "270648500", bssamt: "270499000", totRsrvtnPrceNum: "15", compnoRsrvtnPrceSno: "7", bsisPlnprc: "265727400", drwtYn: "Y" },
+      { bidNtceNo: "N1", plnprc: "270648500", bssamt: "270499000", totRsrvtnPrceNum: "15", compnoRsrvtnPrceSno: "8", bsisPlnprc: "266000000", drwtYn: "Y" },
     ];
     const r = aggregatePreparPrice(items);
     expect(r.planPrice).toBe("270648500");
@@ -75,7 +75,7 @@ describe("aggregatePreparPrice", () => {
   });
   it("빈 목록·기초금액 0이면 사정률 null", () => {
     expect(aggregatePreparPrice([]).saJeongRate).toBeNull();
-    expect(aggregatePreparPrice([{ plnprc: "100", bssamt: "0" }]).saJeongRate).toBeNull();
+    expect(aggregatePreparPrice([{ bidNtceNo: "N1", plnprc: "100", bssamt: "0" }]).saJeongRate).toBeNull();
   });
 });
 

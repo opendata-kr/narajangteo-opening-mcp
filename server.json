@@ -43,8 +43,8 @@
         },
         {
           "name": "DATA_GO_KR_BASE_URL",
-          "description": "게이트웨이 base URL 오버라이드",
-          "default": "https://apis.data.go.kr"
+          "description": "서비스 경로를 포함한 전체 base URL 오버라이드",
+          "default": "https://apis.data.go.kr/1230000/as/ScsbidInfoService"
         }
       ]
     }
