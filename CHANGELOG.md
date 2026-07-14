@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/opendata-kr/narajangteo-opening-mcp/compare/v0.4.0...v0.4.1) (2026-07-14)
+
+
+### Documentation
+
+* **roadmap:** 이행 라이브 재검증·테스트 캐스트 백로그 등록 ([65d96d4](https://github.com/opendata-kr/narajangteo-opening-mcp/commit/65d96d481ad7406427d8ac9491022dd746f80dc8))
+
 ## [0.4.0](https://github.com/opendata-kr/narajangteo-opening-mcp/compare/v0.3.0...v0.4.0) (2026-07-14)
 
 
